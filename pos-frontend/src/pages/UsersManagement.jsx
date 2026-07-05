@@ -10,7 +10,6 @@ export default function UsersManagement() {
   const [tempPassword, setTempPassword] = useState(null); // shown once, per UC-07 note
 
   const loadUsers = async () => {
-    setLoading(true);
     try {
       const data = await getUsers();
       setUsers(data);
@@ -19,24 +18,34 @@ export default function UsersManagement() {
     }
   };
 
-  useEffect(() => { loadUsers(); }, []);
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
     try {
       const result = await createUser(form);
       setTempPassword(result.temp_password); // surfaced once, never re-fetchable
       setForm({ name: '', username: '', email: '', role: 'cashier' });
-      loadUsers();
+      await loadUsers();
     } catch (err) {
       setError(err.response?.data?.message || 'حدث خطأ أثناء إنشاء الحساب');
+      setLoading(false);
     }
   };
 
   const toggleActive = async (u) => {
-    await updateUser(u.id, { is_active: !u.is_active });
-    loadUsers();
+    setLoading(true);
+    try {
+      await updateUser(u.id, { is_active: !u.is_active });
+      await loadUsers();
+    } catch (err) {
+      setError(err.response?.data?.message || 'حدث خطأ أثناء تحديث الحالة');
+      setLoading(false);
+    }
   };
 
   return (

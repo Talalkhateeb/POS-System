@@ -7,6 +7,7 @@ import ChangePassword from './pages/ChangePassword';
 import UsersManagement from './pages/UsersManagement';
 // import Dashboard from './pages/Dashboard';
 // import Pos from './pages/Pos';
+
 function App() {
   return (
     <BrowserRouter>
@@ -15,12 +16,15 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/change-password" element={<ChangePassword />} />
 
-          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="/dashboard" element={<div className="p-4">Admin Dashboard (placeholder)</div>} />
-          </Route>
-
           <Route element={<ProtectedRoute allowedRoles={['admin', 'cashier']} />}>
-            <Route path="/pos" element={<div className="p-4">POS Screen (placeholder)</div>} />
+            <Route element={<Layout />}>
+              {/* <Route path="/pos" element={<Pos />} /> */}
+
+              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                {/* <Route path="/dashboard" element={<Dashboard />} /> */}
+                <Route path="/users" element={<UsersManagement />} />
+              </Route>
+            </Route>
           </Route>
 
           <Route path="/" element={<Navigate to="/login" replace />} />
