@@ -1,9 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import ChangePassword from './pages/ChangePassword';
-
+import UsersManagement from './pages/UsersManagement';
+// import Dashboard from './pages/Dashboard';
+// import Pos from './pages/Pos';
 function App() {
   return (
     <BrowserRouter>

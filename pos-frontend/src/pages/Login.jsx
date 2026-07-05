@@ -60,7 +60,7 @@ export default function Login() {
               onClick={() => setShowPassword((prev) => !prev)}
               tabIndex={-1}
             >
-              {showPassword ? '🙈' : '👁️'}
+              {showPassword ? '😑' : '😐'}
             </button>
           </div>
         </div>
