@@ -1,8 +1,10 @@
 <?php
+
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Request;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Access\AuthorizationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,9 +18,29 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
+
+        // Stop Laravel from ever calling route('login') for API requests — that route
+        // doesn't exist in this API-only app, and eagerly resolving it (regardless of
+        // Accept header) is what was throwing RouteNotFoundException before our own
+        // exception handling ever got a chance to run.
+        $middleware->redirectGuestsTo(function ($request) {
+            return $request->is('api/*') ? null : route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
-            return $request->is('api/*');
+        $exceptions->render(function (AuthenticationException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => 'يجب تسجيل الدخول للوصول لهذا المورد',
+                ], 401);
+            }
+        });
+
+        $exceptions->render(function (AuthorizationException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => 'غير مصرح لك بهذه العملية',
+                ], 403);
+            }
         });
     })->create();

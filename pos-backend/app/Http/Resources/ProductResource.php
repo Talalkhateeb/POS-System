@@ -5,18 +5,19 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class UserResource extends JsonResource
+class ProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
         return [
             'id' => $this->id,
             'name' => $this->name,
-            'username' => $this->username,
-            'email' => $this->email,
-            'role' => $this->role,
+            'category' => $this->category,
+            'price' => (float) $this->price, // cast explicitly — decimal:2 serializes as a string otherwise
+            'stock' => $this->stock,
+            'min_stock_threshold' => $this->min_stock_threshold,
+            'is_low_stock' => $this->isLowStock(),
             'is_active' => $this->is_active,
-            'must_change_password' => $this->must_change_password,
             'created_at' => $this->created_at,
         ];
     }
