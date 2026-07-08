@@ -21,6 +21,8 @@ export default function Navbar() {
             <Link className="nav-link" to="/dashboard">لوحة التحكم</Link>
             <Link className="nav-link" to="/users">إدارة المستخدمين</Link>
             <Link className="nav-link" to="/products">إدارة المنتجات</Link>
+            <Link className="nav-link" to="/settings">الإعدادات</Link>
+
           </>
         )}
         <Link className="nav-link" to="/pos">شاشة البيع</Link>

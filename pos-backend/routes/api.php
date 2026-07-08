@@ -5,6 +5,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SettingController;
 
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -26,5 +27,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::apiResource('/users', UserController::class)->only(['index', 'store', 'update']);
         // 'index' explicitly excluded from products here — it's registered above instead
         Route::apiResource('/products', ProductController::class)->only(['store', 'update']);
+
+        Route::get('/settings', [SettingController::class, 'show']);
+        Route::put('/settings', [SettingController::class, 'update']);
     });
 });

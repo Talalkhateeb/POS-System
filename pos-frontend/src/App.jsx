@@ -7,6 +7,7 @@ import ChangePassword from './pages/ChangePassword';
 import UsersManagement from './pages/UsersManagement';
 import ProductsManagement from './pages/ProductsManagement';
 import Pos from './pages/Pos';
+import SettingsPage from './pages/SettingsPage';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/users" element={<UsersManagement />} />
                 <Route path="/products" element={<ProductsManagement />} />
+                <Route path="/settings" element={<SettingsPage />} />
               </Route>
 
             </Route>
