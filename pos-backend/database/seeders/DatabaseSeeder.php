@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Models\Setting;
+
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -23,6 +25,13 @@ class DatabaseSeeder extends Seeder
              'password' => bcrypt('admin1234'),
              'role' => 'admin',
              'is_active' => true,
+            ]);
+            Setting::firstOrCreate([], [
+            'tax_enabled' => true,
+            'tax_rate' => 10.00,
+            'store_name' => 'POS Training Store',
+            'currency' => 'JOD',
+
             ]);
     }
 }
