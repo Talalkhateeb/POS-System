@@ -13,27 +13,38 @@ export default function Shift() {
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const loadShift = async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const current = await getCurrentShift();
-      setShift(current);
-      const m = await getShiftMovements(current.data.id);
-      setMovements(m.movements);
-    } catch (err) {
-      if (err.response?.status === 404) {
-        setShift(null); // لا توجد وردية مفتوحة — حالة طبيعية، وليست خطأ
-      } else {
-        setError('تعذّر تحميل بيانات الوردية');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadShift();
+    let isActive = true;
+
+    const loadShift = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const current = await getCurrentShift();
+        if (!isActive) return;
+        setShift(current);
+        const m = await getShiftMovements(current.data.id);
+        if (!isActive) return;
+        setMovements(m.movements);
+      } catch (err) {
+        if (!isActive) return;
+        if (err.response?.status === 404) {
+          setShift(null); // لا توجد وردية مفتوحة — حالة طبيعية، وليست خطأ
+        } else {
+          setError('تعذّر تحميل بيانات الوردية');
+        }
+      } finally {
+        if (isActive) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadShift();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const handleOpen = async (e) => {
