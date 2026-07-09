@@ -8,7 +8,9 @@ import UsersManagement from './pages/UsersManagement';
 import ProductsManagement from './pages/ProductsManagement';
 import Pos from './pages/Pos';
 import SettingsPage from './pages/SettingsPage';
-import Shift from './pages/Shift';
+import ShiftPage from './pages/Shifts/ShiftPage';
+import ReturnPage from './pages/Returns/ReturnPage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -18,29 +20,28 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/change-password" element={<ChangePassword />} />
 
-
           {/* Cashier + Admin common layout */}
           <Route element={<ProtectedRoute allowedRoles={['admin', 'cashier']} />}>
             <Route element={<Layout />}>
 
-              {/* POS only for cashier */}
-              <Route 
-                path="/pos" 
-                element={
-                  <ProtectedRoute allowedRoles={['cashier']} />
-                }
+              {/* POS — cashier only */}
+              <Route
+                path="/pos"
+                element={<ProtectedRoute allowedRoles={['cashier']} />}
               >
                 <Route index element={<Pos />} />
-                <Route 
-              path="/shift" 
-              element={
-               <ProtectedRoute allowedRoles={['cashier']} />
-              }
-                >
-                <Route index element={<Shift />} />
-              </Route>
               </Route>
 
+              {/* Shift management — cashier only */}
+              <Route
+                path="/shifts"
+                element={<ProtectedRoute allowedRoles={['cashier']} />}
+              >
+                <Route index element={<ShiftPage />} />
+              </Route>
+
+              {/* Returns — shared between cashier and admin (UC-03) */}
+              <Route path="/returns" element={<ReturnPage />} />
 
               {/* Admin only */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
@@ -52,8 +53,8 @@ function App() {
             </Route>
           </Route>
 
-
           <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
 
         </Routes>
       </AuthProvider>

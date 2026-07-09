@@ -1,5 +1,4 @@
-// src/services/returnService.js
-import axios from '../api/axios'; 
+import axios from './axios';
 
 export const lookupInvoice = (invoiceNumber) =>
   axios.get(`/invoices/lookup/${invoiceNumber}`).then((res) => res.data.data);

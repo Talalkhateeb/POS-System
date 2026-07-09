@@ -1,6 +1,6 @@
 // src/pages/Returns/ReturnPage.jsx
 import { useState } from 'react';
-import { lookupInvoice, submitReturn } from '../../services/returnService';
+import { lookupInvoice, submitReturn } from '../../api/returnService';
 
 export default function ReturnPage() {
   const [invoiceNumber, setInvoiceNumber] = useState('');

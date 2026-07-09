@@ -8,7 +8,7 @@ class OpenShiftRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return in_array($this->user()->role, ['admin', 'cashier'], true);
+        return $this->user()->role === 'cashier';  
     }
 
     public function rules(): array
