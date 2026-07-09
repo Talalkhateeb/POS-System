@@ -26,6 +26,10 @@ export default function Navbar() {
           </>
         )}
         <Link className="nav-link" to="/pos">شاشة البيع</Link>
+        {user.role === 'cashier' && (
+  <Link className="nav-link" to="/shift">الوردية</Link>
+)}
+<Link className="nav-link" to="/pos">شاشة البيع</Link>
       </div>
       <div className="d-flex align-items-center">
         <span className="me-3 text-muted small">{user.name} ({user.role})</span>

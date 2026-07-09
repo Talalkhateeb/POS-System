@@ -8,7 +8,7 @@ import UsersManagement from './pages/UsersManagement';
 import ProductsManagement from './pages/ProductsManagement';
 import Pos from './pages/Pos';
 import SettingsPage from './pages/SettingsPage';
-
+import Shift from './pages/Shift';
 function App() {
   return (
     <BrowserRouter>
@@ -31,6 +31,14 @@ function App() {
                 }
               >
                 <Route index element={<Pos />} />
+                <Route 
+              path="/shift" 
+              element={
+               <ProtectedRoute allowedRoles={['cashier']} />
+              }
+                >
+                <Route index element={<Shift />} />
+              </Route>
               </Route>
 
 
