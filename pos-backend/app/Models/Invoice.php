@@ -33,4 +33,14 @@ class Invoice extends Model
     {
         return $this->belongsTo(User::class, 'cashier_id');
     }
+    public function cashMovements(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    {
+        return $this->morphMany(CashMovement::class, 'reference');
+    }
+
+    public function saleReturns(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SaleReturn::class);
+    }
+
 }
