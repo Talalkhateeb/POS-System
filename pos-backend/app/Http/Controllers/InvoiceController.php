@@ -109,7 +109,18 @@ class InvoiceController extends Controller
                 'total' => $total,
                 'payment_method' => $request->payment_method,
             ]);
+            $openShift = \App\Models\Shift::where('cashier_id', $request->user()->id)
+                  ->where('status', 'open')
+                  ->first();
 
+                 if (! $openShift) {
+                 throw ValidationException::withMessages([
+                  'shift' => 'لا يمكن إتمام عملية بيع دون فتح وردية.',
+                 ]);
+                }
+
+                $invoice->shift_id = $openShift->id;
+                $invoice->save();
             foreach ($lineItems as $line) {
                 $invoice->items()->create([
                     'product_id' => $line['product']->id,
@@ -122,6 +133,16 @@ class InvoiceController extends Controller
                 // FR-4.4: decrement stock atomically, inside the same locked transaction
                 $line['product']->decrement('stock', $line['quantity']);
             }
+            if ($invoice->payment_method === 'cash') {
+            \App\Models\CashMovement::create([
+            'shift_id' => $openShift->id,
+            'cashier_id' => $request->user()->id,
+            'type' => 'sale',
+            'amount' => $total,
+            'reference_id' => $invoice->id,
+            'reference_type' => Invoice::class,
+                        ]);
+}
 
             return $invoice;
         });

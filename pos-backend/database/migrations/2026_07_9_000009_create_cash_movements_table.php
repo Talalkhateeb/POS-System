@@ -1,4 +1,4 @@
-// database/migrations/2025_01_15_000003_create_cash_movements_table.php
+// database/migrations/2026_07_9_000009_create_cash_movements_table.php
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -15,12 +15,8 @@ return new class extends Migration
             $table->foreignId('cashier_id')->constrained('users');
             $table->enum('type', ['sale', 'return']);
             $table->decimal('amount', 10, 2);
-            $table->nullableMorphs('reference'); // reference_id + reference_type
+            $table->nullableMorphs('reference');
             $table->timestamps();
-        });
-
-        Schema::table('cash_movements', function (Blueprint $table) {
-            $table->check('amount >= 0', 'amount_must_be_positive');
         });
     }
 

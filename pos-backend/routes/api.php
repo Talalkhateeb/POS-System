@@ -7,6 +7,9 @@ use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingController;
 
+use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\ReturnController;
+
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
@@ -37,5 +40,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
         Route::get('/settings', [SettingController::class, 'show']);
         Route::put('/settings', [SettingController::class, 'update']);
+        Route::get('/shifts', [ShiftController::class, 'index']);
+
     });
 });

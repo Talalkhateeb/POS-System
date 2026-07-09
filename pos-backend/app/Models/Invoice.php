@@ -10,8 +10,8 @@ class Invoice extends Model
     use HasFactory;
 
     protected $fillable = [
-        'invoice_number', 'cashier_id', 'subtotal',
-        'tax_rate_applied', 'tax_amount', 'total', 'payment_method',
+        'invoice_number', 'cashier_id', 'shift_id', 'subtotal',
+    'tax_rate_applied', 'tax_amount', 'total', 'payment_method',
     ];
 
     protected function casts(): array
