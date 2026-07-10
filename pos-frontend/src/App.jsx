@@ -10,7 +10,7 @@ import Pos from './pages/Pos';
 import SettingsPage from './pages/SettingsPage';
 import ShiftPage from './pages/Shifts/ShiftPage';
 import ReturnPage from './pages/Returns/ReturnPage';
-
+import PermissionsPage from './pages/Permissions/PermissionsPage';
 function App() {
   return (
     <BrowserRouter>
@@ -48,6 +48,8 @@ function App() {
                 <Route path="/users" element={<UsersManagement />} />
                 <Route path="/products" element={<ProductsManagement />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/permissions" element={<PermissionsPage />} />
+
               </Route>
 
             </Route>

@@ -10,6 +10,8 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\ReturnController;
 
+use App\Http\Controllers\PermissionController;
+
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
@@ -33,8 +35,12 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/returns/{saleReturn}', [ReturnController::class, 'show']);
 
     Route::get('/invoices/lookup/{invoiceNumber}', [InvoiceController::class, 'lookupByNumber']);
+    
+ 
+    Route::middleware(['admin'])->group(function () {  
+        Route::get('/permissions/users', [PermissionController::class, 'index']);
+        Route::patch('/permissions/users/{user}', [PermissionController::class, 'update']);
 
-    Route::middleware(['admin'])->group(function () {
         Route::apiResource('/users', UserController::class)->only(['index', 'store', 'update']);
         Route::apiResource('/products', ProductController::class)->only(['store', 'update']);
 

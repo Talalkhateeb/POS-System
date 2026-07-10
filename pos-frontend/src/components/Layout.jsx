@@ -5,7 +5,7 @@ export default function Layout() {
   return (
     <>
       <Navbar />
-      <div className="container-fluid p-3">
+      <div className="p-3">
         <Outlet />
       </div>
     </>

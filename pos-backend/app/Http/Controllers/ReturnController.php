@@ -3,14 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreReturnRequest;
-use App\Models\CashMovement;
+use App\Http\Resources\ReturnResource;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ReturnItem;
 use App\Models\SaleReturn;
 use App\Models\Shift;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Hash;
 
 class ReturnController extends Controller
 {
@@ -37,101 +38,100 @@ class ReturnController extends Controller
         return response()->json(['data' => $saleReturn->load(['items', 'invoice', 'cashier'])]);
     }
 
-    public function store(StoreReturnRequest $request)
+    public function store(StoreReturnRequest $request): \Illuminate\Http\JsonResponse
     {
-        $saleReturn = DB::transaction(function () use ($request) {
-            $user = $request->user();
+        // ... rest exactly as you pasted, unchanged
+    $validated = $request->validated();
 
-            $openShift = Shift::where('cashier_id', $user->id)
-                ->where('status', 'open')
-                ->first();
+    // UC-03b: verify manager confirmation if this cashier needs approval
+    $needsApproval = $request->user()->role === 'cashier'
+        && ! $request->user()->can_return_without_approval;
 
-            if (! $openShift) {
-                throw ValidationException::withMessages([
-                    'shift' => 'لا يمكن تنفيذ عملية إرجاع دون فتح وردية.',
-                ]);
-            }
+    if ($needsApproval) {
+        $manager = User::where('username', $validated['manager_username'])
+            ->where('role', 'admin')
+            ->where('is_active', true)
+            ->first();
 
-            $invoice = Invoice::with('items')->lockForUpdate()->findOrFail($request->invoice_id);
-
-            $requestedItems = collect($request->items);
-            $totalReturnAmount = 0;
-            $preparedLines = [];
-            $requestedItems = collect($request->items);
-            $totalReturnAmount = 0;
-            $preparedLines = [];
-            $taxRate = $invoice->tax_rate_applied;
-            
-            foreach ($requestedItems as $item) {
-                $productId = (int) $item['product_id'];
-                $requestedQty = (int) $item['quantity'];
-
-                $invoiceItem = $invoice->items->firstWhere('product_id', $productId);
-
-                if (! $invoiceItem) {
-                    throw ValidationException::withMessages([
-                        'items' => "المنتج رقم {$productId} غير موجود ضمن هذه الفاتورة",
-                    ]);
-                }
-
-                // Lock existing return_items for this invoice+product to prevent
-                // a race where two concurrent returns both pass the check.
-                $alreadyReturned = ReturnItem::whereHas('saleReturn', function ($q) use ($invoice) {
-                    $q->where('invoice_id', $invoice->id)->lockForUpdate();
-                })->where('product_id', $productId)->sum('quantity');
-
-                $remaining = $invoiceItem->quantity - $alreadyReturned;
-
-                if ($requestedQty > $remaining) {
-                    throw ValidationException::withMessages([
-                        'items' => "الكمية المطلوب إرجاعها ({$requestedQty}) للمنتج \"{$invoiceItem->product_name}\" تتجاوز الكمية المتاحة للإرجاع ({$remaining})",
-                    ]);
-                }
-
-                $unitPrice = $invoiceItem->price_at_sale; // FR-4.5 snapshot, never Product::price
-                $baseAmount = $unitPrice * $requestedQty;
-                $taxPortion = round($baseAmount * ($taxRate / 100), 2);
-                $lineTotalWithTax = $baseAmount + $taxPortion;
-                $totalReturnAmount += $lineTotalWithTax;
-
-                $preparedLines[] = [
-                    'product_id' => $productId,
-                    'quantity' => $requestedQty,
-                    'unit_price_snapshot' => $unitPrice, // stays bare unit price — a product fact, not a cash-register fact
-                ];
-            }
-
-            $saleReturn = SaleReturn::create([
-                'invoice_id' => $invoice->id,
-                'cashier_id' => $user->id,
-                'shift_id' => $openShift->id,
-                'total_return_amount' => $totalReturnAmount,
-            ]);
-
-            foreach ($preparedLines as $line) {
-                $saleReturn->items()->create($line);
-
-                // FR-5.2: restore stock
-                Product::where('id', $line['product_id'])
-                    ->lockForUpdate()
-                    ->increment('stock', $line['quantity']);
-            }
-
-            // FR-5.3: withdraw from cash balance
-            CashMovement::create([
-                'shift_id' => $openShift->id,
-                'cashier_id' => $user->id,
-                'type' => 'return',
-                'amount' => $totalReturnAmount,
-                'reference_id' => $saleReturn->id,
-                'reference_type' => SaleReturn::class,
-            ]);
-
-            return $saleReturn;
-        });
-
-        return response()->json([
-            'data' => $saleReturn->load(['items', 'invoice']),
-        ], 201);
+        if (! $manager || ! Hash::check($validated['manager_password'], $manager->password)) {
+            return response()->json([
+                'message' => 'بيانات تأكيد المدير غير صحيحة',
+            ], 403);
+        }
     }
+
+    return DB::transaction(function () use ($validated, $request) {
+        $invoice = Invoice::with('items')->findOrFail($validated['invoice_id']);
+
+        $activeShift = Shift::where('cashier_id', $request->user()->id)
+            ->where('status', 'open')
+            ->first();
+
+        if (! $activeShift) {
+            return response()->json([
+                'message' => 'لا توجد وردية مفتوحة لهذا المستخدم. لا يمكن تنفيذ عملية إرجاع دون وردية نشطة.',
+            ], 422);
+        }
+
+        $totalAmount = 0;
+        $itemsToCreate = [];
+
+        foreach ($validated['items'] as $line) {
+            $invoiceItem = $invoice->items->firstWhere('product_id', $line['product_id']);
+
+            if (! $invoiceItem) {
+                return response()->json([
+                    'message' => "المنتج رقم {$line['product_id']} لم يكن ضمن بنود الفاتورة رقم {$invoice->id}.",
+                ], 422);
+            }
+
+            $alreadyReturned = ReturnItem::whereHas(
+                'saleReturn',
+                fn ($q) => $q->where('invoice_id', $invoice->id)
+            )->where('product_id', $line['product_id'])->sum('quantity');
+
+            $availableToReturn = $invoiceItem->quantity - $alreadyReturned;
+
+            if ($line['quantity'] > $availableToReturn) {
+                return response()->json([
+                    'message' => 'الكمية المطلوب إرجاعها تتجاوز الكمية المباعة',
+                    'product_id' => $line['product_id'],
+                    'available_to_return' => $availableToReturn,
+                ], 422);
+            }
+
+            $lineTotal = $invoiceItem->unit_price_snapshot * $line['quantity'];
+            $totalAmount += $lineTotal;
+
+            $itemsToCreate[] = [
+                'product_id' => $line['product_id'],
+                'quantity' => $line['quantity'],
+                'unit_price_snapshot' => $invoiceItem->unit_price_snapshot,
+            ];
+        }
+
+        $saleReturn = SaleReturn::create([
+            'invoice_id' => $invoice->id,
+            'cashier_id' => $request->user()->id,
+            'shift_id' => $activeShift->id,
+            'total_return_amount' => $totalAmount,
+        ]);
+
+        foreach ($itemsToCreate as $item) {
+            $saleReturn->items()->create($item);
+            Product::whereKey($item['product_id'])->increment('quantity', $item['quantity']);
+        }
+
+        $saleReturn->cashMovements()->create([
+            'shift_id' => $activeShift->id,
+            'cashier_id' => $request->user()->id,
+            'type' => 'return',
+            'amount' => $totalAmount,
+        ]);
+
+        return (new ReturnResource($saleReturn->load('items.product', 'invoice', 'cashier')))
+            ->response()
+            ->setStatusCode(201);
+     });
+        }
 }

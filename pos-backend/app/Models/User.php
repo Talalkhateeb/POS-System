@@ -20,6 +20,7 @@ class User extends Authenticatable
         'role',
         'is_active',
         'must_change_password',
+        'can_return_without_approval',
     ];
 
     protected $hidden = [
@@ -33,6 +34,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'must_change_password' => 'boolean',
+            'can_return_without_approval' => 'boolean',
         ];
     }
 
