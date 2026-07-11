@@ -11,6 +11,8 @@ import SettingsPage from './pages/SettingsPage';
 import ShiftPage from './pages/Shifts/ShiftPage';
 import ReturnPage from './pages/Returns/ReturnPage';
 import PermissionsPage from './pages/Permissions/PermissionsPage';
+import Dashboard from './pages/Dashboard';
+
 function App() {
   return (
     <BrowserRouter>
@@ -49,6 +51,8 @@ function App() {
                 <Route path="/products" element={<ProductsManagement />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/permissions" element={<PermissionsPage />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+
 
               </Route>
 

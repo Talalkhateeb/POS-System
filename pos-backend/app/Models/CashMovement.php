@@ -3,40 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class CashMovement extends Model
 {
     protected $fillable = [
-        'shift_id', 'cashier_id', 'type', 'amount',
-        'reference_id', 'reference_type',
+        'shift_id', 'cashier_id', 'type', 'amount', 'movementable_id', 'movementable_type',
     ];
 
-    protected static function booted(): void
+    protected function casts(): array
     {
-        static::saving(function (CashMovement $movement) {
-            $movement->amount = abs($movement->amount);
-        });
+        return [
+            'amount' => 'decimal:2',
+        ];
     }
 
-    public function shift(): BelongsTo
+    public function shift()
     {
         return $this->belongsTo(Shift::class);
     }
 
-    public function cashier(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'cashier_id');
-    }
-
-    public function reference(): MorphTo
+    public function movementable()
     {
         return $this->morphTo();
-    }
-
-    public function getSignedAmountAttribute(): float
-    {
-        return $this->type === 'return' ? -(float) $this->amount : (float) $this->amount;
     }
 }

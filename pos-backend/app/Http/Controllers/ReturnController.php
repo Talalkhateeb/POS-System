@@ -12,19 +12,20 @@ use App\Models\Shift;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 class ReturnController extends Controller
 {
     public function index()
     {
         $user = request()->user();
-        $query = SaleReturn::with(['items', 'invoice', 'cashier'])->latest();
+        $query = SaleReturn::with(['items.product', 'invoice', 'cashier'])->latest();
 
         if ($user->role === 'cashier') {
             $query->where('cashier_id', $user->id);
         }
 
-        return response()->json(['data' => $query->get()]);
+        return ReturnResource::collection($query->get());
     }
 
     public function show(SaleReturn $saleReturn)
@@ -35,103 +36,107 @@ class ReturnController extends Controller
             abort(403, 'لا يمكنك عرض مرتجعات كاشير آخر');
         }
 
-        return response()->json(['data' => $saleReturn->load(['items', 'invoice', 'cashier'])]);
+        return new ReturnResource($saleReturn->load(['items.product', 'invoice', 'cashier']));
     }
 
-    public function store(StoreReturnRequest $request): \Illuminate\Http\JsonResponse
+    public function store(StoreReturnRequest $request)
     {
-        // ... rest exactly as you pasted, unchanged
-    $validated = $request->validated();
+        $validated = $request->validated();
 
-    // UC-03b: verify manager confirmation if this cashier needs approval
-    $needsApproval = $request->user()->role === 'cashier'
-        && ! $request->user()->can_return_without_approval;
+        // UC-03b: verify manager confirmation if this cashier needs approval
+        $needsApproval = $request->user()->role === 'cashier'
+            && ! $request->user()->can_return_without_approval;
 
-    if ($needsApproval) {
-        $manager = User::where('username', $validated['manager_username'])
-            ->where('role', 'admin')
-            ->where('is_active', true)
-            ->first();
+        if ($needsApproval) {
+            $manager = User::where('username', $validated['manager_username'])
+                ->where('role', 'admin')
+                ->where('is_active', true)
+                ->first();
 
-        if (! $manager || ! Hash::check($validated['manager_password'], $manager->password)) {
-            return response()->json([
-                'message' => 'بيانات تأكيد المدير غير صحيحة',
-            ], 403);
-        }
-    }
-
-    return DB::transaction(function () use ($validated, $request) {
-        $invoice = Invoice::with('items')->findOrFail($validated['invoice_id']);
-
-        $activeShift = Shift::where('cashier_id', $request->user()->id)
-            ->where('status', 'open')
-            ->first();
-
-        if (! $activeShift) {
-            return response()->json([
-                'message' => 'لا توجد وردية مفتوحة لهذا المستخدم. لا يمكن تنفيذ عملية إرجاع دون وردية نشطة.',
-            ], 422);
-        }
-
-        $totalAmount = 0;
-        $itemsToCreate = [];
-
-        foreach ($validated['items'] as $line) {
-            $invoiceItem = $invoice->items->firstWhere('product_id', $line['product_id']);
-
-            if (! $invoiceItem) {
+            if (! $manager || ! Hash::check($validated['manager_password'], $manager->password)) {
                 return response()->json([
-                    'message' => "المنتج رقم {$line['product_id']} لم يكن ضمن بنود الفاتورة رقم {$invoice->id}.",
-                ], 422);
+                    'message' => 'بيانات تأكيد المدير غير صحيحة',
+                ], 403);
+            }
+        }
+
+        $saleReturn = DB::transaction(function () use ($validated, $request) {
+            $invoice = Invoice::with('items')->findOrFail($validated['invoice_id']);
+
+            $activeShift = Shift::where('cashier_id', $request->user()->id)
+                ->where('status', 'open')
+                ->first();
+
+            if (! $activeShift) {
+                throw ValidationException::withMessages([
+                    'shift' => 'لا توجد وردية مفتوحة لهذا المستخدم. لا يمكن تنفيذ عملية إرجاع دون وردية نشطة.',
+                ]);
             }
 
-            $alreadyReturned = ReturnItem::whereHas(
-                'saleReturn',
-                fn ($q) => $q->where('invoice_id', $invoice->id)
-            )->where('product_id', $line['product_id'])->sum('quantity');
+            $totalAmount = 0;
+            $itemsToCreate = [];
 
-            $availableToReturn = $invoiceItem->quantity - $alreadyReturned;
+            foreach ($validated['items'] as $line) {
+                $invoiceItem = $invoice->items->firstWhere('product_id', $line['product_id']);
 
-            if ($line['quantity'] > $availableToReturn) {
-                return response()->json([
-                    'message' => 'الكمية المطلوب إرجاعها تتجاوز الكمية المباعة',
+                if (! $invoiceItem) {
+                    throw ValidationException::withMessages([
+                        'items' => "المنتج رقم {$line['product_id']} لم يكن ضمن بنود الفاتورة رقم {$invoice->id}.",
+                    ]);
+                }
+
+                // A2 (UC-03): كمية إرجاع أكبر من المُباع — sum against ALL prior returns on this invoice, not just this request
+                $alreadyReturned = ReturnItem::whereHas(
+                    'saleReturn',
+                    fn ($q) => $q->where('invoice_id', $invoice->id)
+                )->where('product_id', $line['product_id'])->sum('quantity');
+
+                $availableToReturn = $invoiceItem->quantity - $alreadyReturned;
+
+                if ($line['quantity'] > $availableToReturn) {
+                    throw ValidationException::withMessages([
+                        'items' => "الكمية المطلوب إرجاعها ({$line['quantity']}) تتجاوز الكمية المتاحة للإرجاع ({$availableToReturn}) للمنتج رقم {$line['product_id']}",
+                    ]);
+                }
+
+                // FR-4.5 / Snapshot Price: return uses the price the customer actually paid, not today's product price
+                $lineTotal = $invoiceItem->price_at_sale * $line['quantity'];
+                $totalAmount += $lineTotal;
+
+                $itemsToCreate[] = [
                     'product_id' => $line['product_id'],
-                    'available_to_return' => $availableToReturn,
-                ], 422);
+                    'quantity' => $line['quantity'],
+                    'unit_price_snapshot' => $invoiceItem->price_at_sale,
+                ];
             }
 
-            $lineTotal = $invoiceItem->unit_price_snapshot * $line['quantity'];
-            $totalAmount += $lineTotal;
+            $saleReturn = SaleReturn::create([
+                'invoice_id' => $invoice->id,
+                'cashier_id' => $request->user()->id,
+                'shift_id' => $activeShift->id,
+                'total_return_amount' => $totalAmount,
+            ]);
 
-            $itemsToCreate[] = [
-                'product_id' => $line['product_id'],
-                'quantity' => $line['quantity'],
-                'unit_price_snapshot' => $invoiceItem->unit_price_snapshot,
-            ];
-        }
+            foreach ($itemsToCreate as $item) {
+                $saleReturn->items()->create($item);
 
-        $saleReturn = SaleReturn::create([
-            'invoice_id' => $invoice->id,
-            'cashier_id' => $request->user()->id,
-            'shift_id' => $activeShift->id,
-            'total_return_amount' => $totalAmount,
-        ]);
+                // FR-5.2: return quantity to stock — column is `stock`, not `quantity`
+                Product::whereKey($item['product_id'])->increment('stock', $item['quantity']);
+            }
 
-        foreach ($itemsToCreate as $item) {
-            $saleReturn->items()->create($item);
-            Product::whereKey($item['product_id'])->increment('quantity', $item['quantity']);
-        }
+            // FR-5.3 / FR-6.3: log the cash-out against the shift, linked back to this return
+            $saleReturn->cashMovements()->create([
+                'shift_id' => $activeShift->id,
+                'cashier_id' => $request->user()->id,
+                'type' => 'return',
+                'amount' => $totalAmount,
+            ]);
 
-        $saleReturn->cashMovements()->create([
-            'shift_id' => $activeShift->id,
-            'cashier_id' => $request->user()->id,
-            'type' => 'return',
-            'amount' => $totalAmount,
-        ]);
+            return $saleReturn;
+        });
 
         return (new ReturnResource($saleReturn->load('items.product', 'invoice', 'cashier')))
             ->response()
             ->setStatusCode(201);
-     });
-        }
+    }
 }
