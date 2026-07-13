@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('users', 'can_return_without_approval')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->boolean('can_return_without_approval')->default(false)->after('role');
         });
@@ -15,6 +19,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (! Schema::hasColumn('users', 'can_return_without_approval')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->dropColumn('can_return_without_approval');
         });

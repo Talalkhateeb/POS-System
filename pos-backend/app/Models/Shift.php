@@ -29,4 +29,15 @@ class Shift extends Model
     {
         return $this->hasMany(CashMovement::class);
     }
+
+    public function getExpectedBalanceAttribute(): float
+    {
+        $movements = $this->relationLoaded('cashMovements')
+            ? $this->cashMovements
+            : $this->cashMovements()->get();
+
+        $movementTotal = $movements->sum(fn (CashMovement $movement) => $movement->signed_amount);
+
+        return round((float) $this->opening_balance + $movementTotal, 2);
+    }
 }

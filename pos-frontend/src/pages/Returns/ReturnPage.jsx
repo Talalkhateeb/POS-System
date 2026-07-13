@@ -1,8 +1,10 @@
 // src/pages/Returns/ReturnPage.jsx
 import { useState } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
 import { lookupInvoice, submitReturn } from '../../api/returnService';
 
 export default function ReturnPage() {
+  const { t } = useLanguage();
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoice, setInvoice] = useState(null);
   const [returnQuantities, setReturnQuantities] = useState({});
@@ -23,7 +25,7 @@ export default function ReturnPage() {
       setInvoice(found);
       setReturnQuantities({});
     } catch (err) {
-      setError(err.response?.data?.message || 'رقم الفاتورة غير موجود');
+      setError(err.response?.data?.message || t('errorOccurred'));
     } finally {
       setLoading(false);
     }
@@ -42,7 +44,7 @@ export default function ReturnPage() {
       .map(([product_id, quantity]) => ({ product_id: Number(product_id), quantity }));
 
     if (items.length === 0) {
-      setError('يجب تحديد كمية إرجاع لمنتج واحد على الأقل');
+      setError(t('mustSelectReturnQuantity'));
       return;
     }
 
@@ -53,7 +55,7 @@ export default function ReturnPage() {
       payload.manager_username = managerUsername;
       payload.manager_password = managerPassword;
     } const result = await submitReturn(payload);
-    setSuccess(`تم إنشاء المرتجع بنجاح — المبلغ: ${result.total_return_amount}`);
+    setSuccess(`${t('returnConfirmed')} ${result.total_return_amount}`);
     setInvoice(null);
     setInvoiceNumber('');
     setReturnQuantities({});
@@ -61,8 +63,8 @@ export default function ReturnPage() {
     setManagerUsername('');
     setManagerPassword('');
   } catch (err) {
-    const message = err.response?.data?.message || 'حدث خطأ أثناء تنفيذ عملية الإرجاع';
-    if (message.includes('تأكيد المدير')) {
+    const message = err.response?.data?.message || t('errorOccurred');
+    if (message.includes('manager') || message.includes('مدير') || message.includes('تأكيد')) {
       setNeedsManagerConfirmation(true);
     }
     setError(message);
@@ -72,18 +74,18 @@ export default function ReturnPage() {
 };
   return (
     <div className="container mt-4">
-      <h3>إرجاع منتج</h3>
+      <h3>{t('returnTitle')}</h3>
 
       <div className="input-group mb-3" style={{ maxWidth: 400 }}>
         <input
           type="text"
           className="form-control"
-          placeholder="رقم الفاتورة"
+          placeholder={t('invoiceNumber')}
           value={invoiceNumber}
           onChange={(e) => setInvoiceNumber(e.target.value)}
         />
         <button className="btn btn-primary" onClick={handleSearch} disabled={loading}>
-          بحث
+          {t('search')}
         </button>
       </div>
 
@@ -92,14 +94,14 @@ export default function ReturnPage() {
 
       {invoice && (
         <div className="card p-3">
-          <h5>الفاتورة #{invoice.invoice_number}</h5>
+          <h5>{t('invoiceNumberLabel')} {invoice.invoice_number}</h5>
           <table className="table">
             <thead>
               <tr>
-                <th>المنتج</th>
-                <th>الكمية المباعة</th>
-                <th>السعر وقت البيع</th>
-                <th>كمية الإرجاع</th>
+                <th>{t('tableName')}</th>
+                <th>{t('invoiceNumber')}</th>
+                <th>{t('paymentMethodLabel')}</th>
+                <th>{t('returnTitle')}</th>
               </tr>
             </thead>
             <tbody>
@@ -124,12 +126,12 @@ export default function ReturnPage() {
           </table>
           {needsManagerConfirmation && (
   <div className="border rounded p-3 mb-3 bg-light">
-    <p className="mb-2 fw-bold text-warning">هذه العملية تتطلب تأكيد المدير</p>
+    <p className="mb-2 fw-bold text-warning">{t('managerConfirmationRequired')}</p>
     <div className="mb-2">
       <input
         type="text"
         className="form-control"
-        placeholder="اسم مستخدم المدير"
+        placeholder={t('managerUsername')}
         value={managerUsername}
         onChange={(e) => setManagerUsername(e.target.value)}
       />
@@ -138,7 +140,7 @@ export default function ReturnPage() {
       <input
         type="password"
         className="form-control"
-        placeholder="كلمة سر المدير"
+        placeholder={t('managerPassword')}
         value={managerPassword}
         onChange={(e) => setManagerPassword(e.target.value)}
       />
@@ -146,7 +148,7 @@ export default function ReturnPage() {
   </div>
 )}
           <button className="btn btn-danger" onClick={handleSubmit} disabled={loading}>
-            تنفيذ الإرجاع
+            {t('submitReturn')}
           </button>
         </div>
       )}

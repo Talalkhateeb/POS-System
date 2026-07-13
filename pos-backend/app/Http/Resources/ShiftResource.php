@@ -14,6 +14,7 @@ class ShiftResource extends JsonResource
             'cashier_id' => $this->cashier_id,
             'cashier_name' => $this->cashier->name ?? null,
             'opening_balance' => $this->opening_balance,
+            'expected_balance' => $this->expected_balance,
             'closing_balance' => $this->closing_balance,
             'status' => $this->status,
             'opened_at' => $this->opened_at,

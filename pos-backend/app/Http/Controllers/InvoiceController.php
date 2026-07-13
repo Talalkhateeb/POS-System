@@ -36,6 +36,47 @@ class InvoiceController extends Controller
         return new InvoiceResource($invoice->load(['cashier', 'items']));
     }
 
+    public function lookupByNumber(string $invoiceNumber)
+    {
+        $invoice = Invoice::with(['cashier', 'items'])
+            ->where('invoice_number', $invoiceNumber)
+            ->orWhere('invoice_number', 'INV-' . ltrim($invoiceNumber, '# '))
+            ->first();
+
+        if (! $invoice) {
+            return response()->json([
+                'message' => 'رقم الفاتورة غير موجود',
+            ], 404);
+        }
+
+        $user = request()->user();
+
+        if ($user->role === 'cashier' && $invoice->cashier_id !== $user->id) {
+            abort(403, 'لا يمكنك إرجاع فاتورة كاشير آخر');
+        }
+
+        return response()->json([
+            'data' => [
+                'id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'cashier_name' => optional($invoice->cashier)->name,
+                'subtotal' => (float) $invoice->subtotal,
+                'tax_amount' => (float) $invoice->tax_amount,
+                'total' => (float) $invoice->total,
+                'payment_method' => $invoice->payment_method,
+                'created_at' => $invoice->created_at,
+                'items' => $invoice->items->map(fn ($item) => [
+                    'id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product_name,
+                    'quantity' => (int) $item->quantity,
+                    'unit_price_snapshot' => (float) $item->price_at_sale,
+                    'line_total' => (float) $item->line_total,
+                ])->values(),
+            ],
+        ]);
+    }
+
     public function store(StoreInvoiceRequest $request)
     {
         $invoice = DB::transaction(function () use ($request) {

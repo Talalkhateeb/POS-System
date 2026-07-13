@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { getProducts, createProduct, updateProduct } from '../api/products';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function ProductsManagement() {
+  const { t } = useLanguage();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -13,6 +15,7 @@ export default function ProductsManagement() {
     min_stock_threshold: 5
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   // تحميل المنتجات (بدون setLoading(true))
   const loadProducts = async () => {
@@ -37,9 +40,10 @@ export default function ProductsManagement() {
   const handleCreate = async (e) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
 
     try {
-      await createProduct(form);
+      const result = await createProduct(form);
 
       setForm({
         name: '',
@@ -50,10 +54,11 @@ export default function ProductsManagement() {
       });
 
       setShowModal(false);
+      setSuccess(result.message || t('productSaved'));
 
       await refreshProducts();
     } catch (err) {
-      setError(err.response?.data?.message || 'حدث خطأ أثناء إضافة المنتج');
+        setError(err.response?.data?.message || t('errorOccurred'));
     }
   };
 
@@ -68,27 +73,29 @@ export default function ProductsManagement() {
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h5>إدارة المنتجات</h5>
+        <h5>{t('productsManagement')}</h5>
 
         <button
           className="btn btn-primary btn-sm"
           onClick={() => setShowModal(true)}
         >
-          + إضافة منتج
+          {t('addProductButton')}
         </button>
       </div>
 
+      {success && <div className="alert alert-success py-2">{success}</div>}
+
       {loading ? (
-        <p>جارٍ التحميل...</p>
+        <p>{t('loading')}</p>
       ) : (
         <table className="table table-striped">
           <thead>
             <tr>
-              <th>الاسم</th>
-              <th>التصنيف</th>
-              <th>السعر</th>
-              <th>المخزون</th>
-              <th>الحالة</th>
+              <th>{t('tableName')}</th>
+              <th>{t('productCategoryPlaceholder')}</th>
+              <th>{t('productPricePlaceholder')}</th>
+              <th>{t('productStockPlaceholder')}</th>
+              <th>{t('tableStatus')}</th>
               <th></th>
             </tr>
           </thead>
@@ -110,18 +117,18 @@ export default function ProductsManagement() {
 
                   {p.is_low_stock && (
                     <span className="badge bg-danger ms-2">
-                      مخزون منخفض
+                      {t('productLowStockBadge')}
                     </span>
                   )}
                 </td>
 
                 <td>
-                  <span
+                    <span
                     className={`badge ${
                       p.is_active ? 'bg-success' : 'bg-secondary'
                     }`}
                   >
-                    {p.is_active ? 'مفعّل' : 'معطّل'}
+                    {p.is_active ? t('activeStatus') : t('inactiveStatus')}
                   </span>
                 </td>
 
@@ -130,7 +137,7 @@ export default function ProductsManagement() {
                     className="btn btn-sm btn-outline-secondary"
                     onClick={() => toggleActive(p)}
                   >
-                    {p.is_active ? 'تعطيل' : 'تفعيل'}
+                    {p.is_active ? t('disableAction') : t('enableAction')}
                   </button>
                 </td>
               </tr>
@@ -147,7 +154,7 @@ export default function ProductsManagement() {
           <div className="modal-dialog">
             <div className="modal-content p-3">
               <form onSubmit={handleCreate}>
-                <h6 className="mb-3">إضافة منتج جديد</h6>
+                <h6 className="mb-3">{t('addProductButton')}</h6>
 
                 {error && (
                   <div className="alert alert-danger py-2">
@@ -157,7 +164,7 @@ export default function ProductsManagement() {
 
                 <input
                   className="form-control mb-2"
-                  placeholder="اسم المنتج"
+                  placeholder={t('productNamePlaceholder')}
                   value={form.name}
                   onChange={(e) =>
                     setForm({ ...form, name: e.target.value })
@@ -167,7 +174,7 @@ export default function ProductsManagement() {
 
                 <input
                   className="form-control mb-2"
-                  placeholder="التصنيف (اختياري)"
+                  placeholder={t('productCategoryPlaceholder')}
                   value={form.category}
                   onChange={(e) =>
                     setForm({ ...form, category: e.target.value })
@@ -179,7 +186,7 @@ export default function ProductsManagement() {
                   step="0.01"
                   min="0"
                   className="form-control mb-2"
-                  placeholder="السعر"
+                  placeholder={t('productPricePlaceholder')}
                   value={form.price}
                   onChange={(e) =>
                     setForm({ ...form, price: e.target.value })
@@ -191,7 +198,7 @@ export default function ProductsManagement() {
                   type="number"
                   min="0"
                   className="form-control mb-2"
-                  placeholder="الكمية الأولية"
+                  placeholder={t('productStockPlaceholder')}
                   value={form.stock}
                   onChange={(e) =>
                     setForm({ ...form, stock: e.target.value })
@@ -203,7 +210,7 @@ export default function ProductsManagement() {
                   type="number"
                   min="0"
                   className="form-control mb-3"
-                  placeholder="الحد الأدنى للتنبيه"
+                  placeholder={t('productMinStockPlaceholder')}
                   value={form.min_stock_threshold}
                   onChange={(e) =>
                     setForm({
@@ -218,7 +225,7 @@ export default function ProductsManagement() {
                     type="submit"
                     className="btn btn-primary flex-grow-1"
                   >
-                    حفظ
+                    {t('save')}
                   </button>
 
                   <button
@@ -226,7 +233,7 @@ export default function ProductsManagement() {
                     className="btn btn-outline-secondary"
                     onClick={() => setShowModal(false)}
                   >
-                    إلغاء
+                    {t('cancel')}
                   </button>
                 </div>
               </form>

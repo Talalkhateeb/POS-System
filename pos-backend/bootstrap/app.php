@@ -43,4 +43,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 ], 403);
             }
         });
+        $exceptions->render(function (\Illuminate\Validation\ValidationException $e, $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'message' => collect($e->errors())->flatten()->first() ?? 'بيانات غير صحيحة',
+                    'errors' => $e->errors(),
+                ], 422);
+            }
+        });
     })->create();

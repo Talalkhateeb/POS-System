@@ -1,18 +1,50 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 import { getProducts } from '../api/products';
 import { createInvoice } from '../api/invoices';
+import { getCurrentShift } from '../api/shiftService';
 import InvoiceReceipt from '../components/InvoiceReceipt';
 
 export default function Pos() {
+  const { t } = useLanguage();
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]); // [{ product, quantity }]
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [shiftLoading, setShiftLoading] = useState(true);
+  const [hasOpenShift, setHasOpenShift] = useState(false);
   const [completedInvoice, setCompletedInvoice] = useState(null);
 
   useEffect(() => {
-    getProducts().then(data => setProducts(data.filter(p => p.is_active)));
+    let cancelled = false;
+
+    getCurrentShift()
+      .then(() => {
+        if (cancelled) return;
+        setHasOpenShift(true);
+        return getProducts().then(data => {
+          if (!cancelled) setProducts(data.filter(p => p.is_active));
+        });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+
+        if (err.response?.status === 404) {
+          setHasOpenShift(false);
+          return;
+        }
+
+        setError(err.response?.data?.message || t('errorOccurred'));
+      })
+      .finally(() => {
+        if (!cancelled) setShiftLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const addToCart = (product) => {
@@ -63,7 +95,7 @@ export default function Pos() {
       const refreshed = await getProducts();
       setProducts(refreshed.filter(p => p.is_active));
     } catch (err) {
-      setError(err.response?.data?.message || 'حدث خطأ أثناء إتمام البيع');
+      setError(err.response?.data?.message || t('errorOccurred'));
     } finally {
       setLoading(false);
     }
@@ -78,10 +110,24 @@ export default function Pos() {
     );
   }
 
+  if (shiftLoading) {
+    return <p>{t('verifyingShift')}</p>;
+  }
+
+  if (!hasOpenShift) {
+    return (
+      <div className="alert alert-warning">
+        <h5 className="alert-heading">{t('openShiftTitle')}</h5>
+        <p className="mb-3">{t('openShiftMessage')}</p>
+        <Link className="btn btn-primary" to="/shifts">{t('openShiftButton')}</Link>
+      </div>
+    );
+  }
+
   return (
     <div className="row">
       <div className="col-md-7">
-        <h5 className="mb-3">المنتجات</h5>
+        <h5 className="mb-3">{t('productsTitle')}</h5>
         <div className="row row-cols-2 row-cols-md-3 g-2">
           {products.map(p => (
             <div className="col" key={p.id}>
@@ -91,7 +137,7 @@ export default function Pos() {
                 disabled={p.stock === 0}
               >
                 <div className="fw-bold">{p.name}</div>
-                <div className="small text-muted">{p.price.toFixed(2)} — متوفر: {p.stock}</div>
+                <div className="small text-muted">{p.price.toFixed(2)} — {t('availableLabel')} {p.stock}</div>
               </button>
             </div>
           ))}
@@ -99,11 +145,11 @@ export default function Pos() {
       </div>
 
       <div className="col-md-5">
-        <h5 className="mb-3">الفاتورة الحالية</h5>
+        <h5 className="mb-3">{t('currentInvoice')}</h5>
         {error && <div className="alert alert-danger py-2">{error}</div>}
 
         {cart.length === 0 ? (
-          <p className="text-muted">لا توجد منتجات مضافة</p>
+          <p className="text-muted">{t('noProductsAdded')}</p>
         ) : (
           <table className="table table-sm">
             <tbody>
@@ -126,24 +172,24 @@ export default function Pos() {
         )}
 
         <div className="d-flex justify-content-between fw-bold border-top pt-2 mb-3">
-          <span>المجموع الفرعي</span>
+          <span>{t('subtotalLabel')}</span>
           <span>{subtotal.toFixed(2)}</span>
         </div>
 
         <div className="mb-3">
-          <label className="form-label">طريقة الدفع</label>
+          <label className="form-label">{t('paymentMethodLabel')}</label>
           <select className="form-select" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
-            <option value="cash">نقدي</option>
-            <option value="card">بطاقة</option>
+            <option value="cash">{t('paymentCash')}</option>
+            <option value="card">{t('paymentCard')}</option>
           </select>
         </div>
 
         <div className="d-flex gap-2">
           <button className="btn btn-success flex-grow-1" disabled={cart.length === 0 || loading} onClick={handleCheckout}>
-            {loading ? 'جارٍ الإتمام...' : 'إتمام البيع'}
+            {loading ? t('completingSale') : t('checkout')}
           </button>
           <button className="btn btn-outline-secondary" disabled={cart.length === 0} onClick={cancelSale}>
-            إلغاء
+            {t('cancel')}
           </button>
         </div>
       </div>

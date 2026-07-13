@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSettings, updateSettings } from '../api/settings';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function SettingsPage() {
   const [form, setForm] = useState(null);
@@ -8,6 +9,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
+  const { t } = useLanguage();
 
   useEffect(() => {
     let ignore = false;
@@ -18,7 +20,7 @@ export default function SettingsPage() {
         if (!ignore) setForm(data);
       } catch (err) {
         if (!ignore) {
-          setError(err.response?.data?.message || 'حدث خطأ أثناء تحميل الإعدادات');
+          setError(err.response?.data?.message || t('settingsLoadError'));
         }
       } finally {
         if (!ignore) setLoading(false);
@@ -49,24 +51,24 @@ export default function SettingsPage() {
     try {
       const data = await updateSettings(form);
       setForm(data);
-      setMessage('تم حفظ الإعدادات بنجاح');
+      setMessage(t('settingsSaved'));
     } catch (err) {
       if (err.response?.status === 422) {
         setFieldErrors(err.response.data.errors || {});
       } else {
-        setError(err.response?.data?.message || 'حدث خطأ أثناء حفظ الإعدادات');
+        setError(err.response?.data?.message || t('settingsSaveError'));
       }
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <p>جارٍ التحميل...</p>;
-  if (!form) return <p className="alert alert-danger">{error || 'تعذر تحميل الإعدادات'}</p>;
+  if (loading) return <p>{t('loading')}</p>;
+  if (!form) return <p className="alert alert-danger">{error || t('settingsLoadError')}</p>;
 
   return (
     <div>
-      <h5 className="mb-3">الإعدادات العامة</h5>
+      <h5 className="mb-3">{t('settingsTitle')}</h5>
 
       {error && <div className="alert alert-danger py-2">{error}</div>}
       {message && <div className="alert alert-success py-2">{message}</div>}
@@ -82,12 +84,12 @@ export default function SettingsPage() {
             onChange={handleChange}
           />
           <label className="form-check-label" htmlFor="tax_enabled">
-            تفعيل الضريبة
+            {t('taxEnabled')}
           </label>
         </div>
 
         <div className="mb-3">
-          <label className="form-label">نسبة الضريبة (%)</label>
+          <label className="form-label">{t('taxRateLabel')}</label>
           <input
             type="number"
             step="0.01"
@@ -103,7 +105,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="mb-3">
-          <label className="form-label">اسم المحل</label>
+          <label className="form-label">{t('storeNameLabel')}</label>
           <input
             type="text"
             className="form-control"
@@ -117,7 +119,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="mb-3">
-          <label className="form-label">العملة</label>
+          <label className="form-label">{t('currencyLabel')}</label>
           <input
             type="text"
             className="form-control"
@@ -131,7 +133,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="mb-3">
-          <label className="form-label">ترويسة الفاتورة</label>
+          <label className="form-label">{t('invoiceHeaderLabel')}</label>
           <input
             type="text"
             className="form-control"
@@ -145,7 +147,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="mb-3">
-          <label className="form-label">الحد الأدنى للتنبيه بنقص المخزون</label>
+          <label className="form-label">{t('lowStockThresholdLabel')}</label>
           <input
             type="number"
             className="form-control"
@@ -159,7 +161,7 @@ export default function SettingsPage() {
         </div>
 
         <button type="submit" className="btn btn-primary" disabled={saving}>
-          {saving ? 'جارٍ الحفظ...' : 'حفظ الإعدادات'}
+          {saving ? t('savingSettings') : t('settingsSaved')}
         </button>
       </form>
     </div>

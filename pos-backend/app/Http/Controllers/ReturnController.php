@@ -33,7 +33,7 @@ class ReturnController extends Controller
         $user = request()->user();
 
         if ($user->role === 'cashier' && $saleReturn->cashier_id !== $user->id) {
-            abort(403, 'لا يمكنك عرض مرتجعات كاشير آخر');
+            abort(403, 'You cannot view returns for another cashier.');
         }
 
         return new ReturnResource($saleReturn->load(['items.product', 'invoice', 'cashier']));
@@ -55,7 +55,7 @@ class ReturnController extends Controller
 
             if (! $manager || ! Hash::check($validated['manager_password'], $manager->password)) {
                 return response()->json([
-                    'message' => 'بيانات تأكيد المدير غير صحيحة',
+                    'message' => 'Manager verification credentials are incorrect.',
                 ], 403);
             }
         }
@@ -69,7 +69,7 @@ class ReturnController extends Controller
 
             if (! $activeShift) {
                 throw ValidationException::withMessages([
-                    'shift' => 'لا توجد وردية مفتوحة لهذا المستخدم. لا يمكن تنفيذ عملية إرجاع دون وردية نشطة.',
+                    'shift' => 'No open shift exists for this user. Returns cannot be processed without an active shift.',
                 ]);
             }
 
@@ -81,11 +81,11 @@ class ReturnController extends Controller
 
                 if (! $invoiceItem) {
                     throw ValidationException::withMessages([
-                        'items' => "المنتج رقم {$line['product_id']} لم يكن ضمن بنود الفاتورة رقم {$invoice->id}.",
+                        'items' => "Product id {$line['product_id']} was not part of invoice {$invoice->id}.",
                     ]);
                 }
 
-                // A2 (UC-03): كمية إرجاع أكبر من المُباع — sum against ALL prior returns on this invoice, not just this request
+                // A2 (UC-03): return quantity greater than sold — sum against ALL prior returns on this invoice, not just this request
                 $alreadyReturned = ReturnItem::whereHas(
                     'saleReturn',
                     fn ($q) => $q->where('invoice_id', $invoice->id)
@@ -95,7 +95,7 @@ class ReturnController extends Controller
 
                 if ($line['quantity'] > $availableToReturn) {
                     throw ValidationException::withMessages([
-                        'items' => "الكمية المطلوب إرجاعها ({$line['quantity']}) تتجاوز الكمية المتاحة للإرجاع ({$availableToReturn}) للمنتج رقم {$line['product_id']}",
+                        'items' => "The requested return quantity ({$line['quantity']}) exceeds the available return quantity ({$availableToReturn}) for product id {$line['product_id']}.",
                     ]);
                 }
 

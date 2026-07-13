@@ -1,8 +1,10 @@
 // src/pages/Permissions/PermissionsPage.jsx
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../../context/LanguageContext';
 import { getCashierPermissions, updateCashierPermission } from '../../api/permissionService';
 
 export default function PermissionsPage() {
+  const { t } = useLanguage();
   const [cashiers, setCashiers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,7 +20,7 @@ export default function PermissionsPage() {
         const data = await getCashierPermissions();
         if (!ignore) setCashiers(data);
       } catch (err) {
-        if (!ignore) setError(err.response?.data?.message || 'تعذر تحميل بيانات الصلاحيات');
+        if (!ignore) setError(err.response?.data?.message || t('loadingPermissionsError'));
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -41,7 +43,7 @@ export default function PermissionsPage() {
         )
       );
     } catch (err) {
-      setError(err.response?.data?.message || 'تعذر تحديث الصلاحية');
+      setError(err.response?.data?.message || t('updatePermissionError'));
     } finally {
       setSavingId(null);
     }
@@ -57,23 +59,23 @@ export default function PermissionsPage() {
 
   return (
     <div className="container mt-4" style={{ maxWidth: 720 }}>
-      <h3>إدارة الصلاحيات</h3>
+      <h3>{t('permissionsTitle')}</h3>
       <p className="text-muted">
-        تحديد الكاشيرين المسموح لهم بتنفيذ عمليات الإرجاع دون الحاجة لتأكيد المدير.
+        {t('permissionsDescription')}
       </p>
 
       {error && <div className="alert alert-danger">{error}</div>}
 
       {cashiers.length === 0 ? (
-        <p className="text-muted">لا يوجد حسابات كاشير بعد.</p>
+        <p className="text-muted">{t('noCashiersYet')}</p>
       ) : (
         <table className="table">
           <thead>
             <tr>
-              <th>الاسم</th>
-              <th>اسم المستخدم</th>
-              <th>الحالة</th>
-              <th>إرجاع بدون موافقة</th>
+              <th>{t('tableName')}</th>
+              <th>{t('tableUsername')}</th>
+              <th>{t('tableStatus')}</th>
+              <th>{t('returnWithoutApproval')}</th>
             </tr>
           </thead>
           <tbody>
@@ -83,7 +85,7 @@ export default function PermissionsPage() {
                 <td>{c.username}</td>
                 <td>
                   <span className={`badge ${c.is_active ? 'bg-success' : 'bg-secondary'}`}>
-                    {c.is_active ? 'فعال' : 'معطل'}
+                    {c.is_active ? t('activeLabel') : t('inactiveLabel')}
                   </span>
                 </td>
                 <td>

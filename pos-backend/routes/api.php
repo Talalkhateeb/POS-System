@@ -19,9 +19,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::put('/me', [AuthController::class, 'updateProfile']);
 
     Route::get('/products', [ProductController::class, 'index']);
 
+    Route::get('/invoices/lookup/{invoiceNumber}', [InvoiceController::class, 'lookupByNumber']);
     Route::get('/invoices', [InvoiceController::class, 'index']);
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show']);
     Route::post('/invoices', [InvoiceController::class, 'store']);
@@ -34,9 +36,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/returns', [ReturnController::class, 'index']);
     Route::post('/returns', [ReturnController::class, 'store']);
     Route::get('/returns/{saleReturn}', [ReturnController::class, 'show']);
-
-    Route::get('/invoices/lookup/{invoiceNumber}', [InvoiceController::class, 'lookupByNumber']);
-
 
     Route::middleware(['admin'])->group(function () {
         Route::get('/permissions/users', [PermissionController::class, 'index']);
@@ -53,5 +52,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
        Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
        Route::get('/dashboard/cashiers', [DashboardController::class, 'cashiers']);
        Route::get('/dashboard/top-products', [DashboardController::class, 'topProducts']);
+       Route::get('/dashboard/history', [DashboardController::class, 'history']);
     });
 });

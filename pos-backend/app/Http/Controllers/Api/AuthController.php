@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
@@ -42,6 +43,7 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'username' => $user->username,
+                'email' => $user->email,
                 'role' => $user->role,
                 'must_change_password' => $user->must_change_password, // A2
             ],
@@ -71,6 +73,51 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return response()->json($request->user());
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'current_password' => ['nullable', 'required_with:password', 'string'],
+            'password' => ['nullable', 'string', 'min:6', 'confirmed'],
+        ]);
+
+        if (! empty($validated['password']) && ! Hash::check($validated['current_password'] ?? '', $user->password)) {
+            return response()->json([
+                'message' => 'كلمة السر الحالية غير صحيحة',
+                'errors' => [
+                    'current_password' => ['كلمة السر الحالية غير صحيحة'],
+                ],
+            ], 422);
+        }
+
+        $user->name = $validated['name'];
+        $user->username = $validated['username'];
+        $user->email = $validated['email'] ?? null;
+
+        if (! empty($validated['password'])) {
+            $user->password = $validated['password'];
+            $user->must_change_password = false;
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'تم تحديث الحساب بنجاح',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'username' => $user->username,
+                'email' => $user->email,
+                'role' => $user->role,
+                'must_change_password' => $user->must_change_password,
+            ],
+        ]);
     }
 
     public function logout(Request $request)

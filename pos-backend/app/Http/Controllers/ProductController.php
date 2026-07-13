@@ -18,9 +18,26 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request)
     {
-        $product = Product::create($request->validated());
+        $validated = $request->validated();
+        $existingProduct = Product::where('name', $validated['name'])->first();
 
-        return (new ProductResource($product))
+        if ($existingProduct) {
+            $existingProduct->fill([
+                'category' => $validated['category'] ?? $existingProduct->category,
+                'price' => $validated['price'],
+                'min_stock_threshold' => $validated['min_stock_threshold'] ?? $existingProduct->min_stock_threshold,
+                'is_active' => true,
+            ]);
+            $existingProduct->stock = (int) $existingProduct->stock + (int) $validated['stock'];
+            $existingProduct->save();
+
+            return (new ProductResource($existingProduct))
+                ->additional(['message' => 'تم تحديث مخزون المنتج الموجود'])
+                ->response();
+        }
+
+        return (new ProductResource(Product::create($validated)))
+            ->additional(['message' => 'تمت إضافة المنتج بنجاح'])
             ->response()
             ->setStatusCode(201);
     }

@@ -41,6 +41,6 @@ class SaleReturn extends Model
 
     public function cashMovements()
     {
-        return $this->morphMany(CashMovement::class, 'movementable');
+        return $this->morphMany(CashMovement::class, 'reference');
     }
 }

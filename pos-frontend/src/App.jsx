@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -12,12 +13,14 @@ import ShiftPage from './pages/Shifts/ShiftPage';
 import ReturnPage from './pages/Returns/ReturnPage';
 import PermissionsPage from './pages/Permissions/PermissionsPage';
 import Dashboard from './pages/Dashboard';
+import AccountPage from './pages/AccountPage';
 
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Routes>
+      <LanguageProvider>
+        <AuthProvider>
+          <Routes>
 
           <Route path="/login" element={<Login />} />
           <Route path="/change-password" element={<ChangePassword />} />
@@ -40,10 +43,11 @@ function App() {
                 element={<ProtectedRoute allowedRoles={['cashier']} />}
               >
                 <Route index element={<ShiftPage />} />
-              </Route>
+              </Route> 
 
               {/* Returns — shared between cashier and admin (UC-03) */}
               <Route path="/returns" element={<ReturnPage />} />
+              <Route path="/account" element={<AccountPage />} />
 
               {/* Admin only */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
@@ -62,8 +66,9 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
 
-        </Routes>
-      </AuthProvider>
+          </Routes>
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

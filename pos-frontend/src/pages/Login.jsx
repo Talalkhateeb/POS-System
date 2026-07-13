@@ -1,73 +1,69 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
     setLoading(true);
+
     try {
       const user = await login(username, password);
-      if (user.must_change_password) {
-        navigate('/change-password');
-      } else {
-        navigate(user.role === 'admin' ? '/dashboard' : '/pos');
-      }
+      navigate(user.role === 'admin' ? '/dashboard' : '/pos');
     } catch (err) {
-      setError(err.response?.data?.message || 'حدث خطأ، حاول مجددًا');
+      setError(err.response?.data?.message || t('loginError'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100">
-      <form onSubmit={handleSubmit} className="p-4 border rounded shadow-sm" style={{ minWidth: 340 }}>
-        <h4 className="mb-3 text-center">تسجيل الدخول</h4>
-        {error && <div className="alert alert-danger py-2">{error}</div>}
-        <div className="mb-3">
-          <label className="form-label">اسم المستخدم</label>
-          <input
-            className="form-control"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            autoFocus
-          />
-        </div>
-        <div className="mb-3">
-          <label className="form-label">كلمة السر</label>
-          <div className="input-group">
+    <div className="container py-5 d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+      <div className="w-100" style={{ maxWidth: 420 }}>
+        <form onSubmit={handleSubmit} className="p-4 border rounded shadow-sm bg-white">
+          <h4 className="mb-3 text-center">{t('loginTitle')}</h4>
+
+          {error && <div className="alert alert-danger py-2">{error}</div>}
+
+          <div className="mb-3">
+            <label className="form-label">{t('username')}</label>
             <input
-              type={showPassword ? 'text' : 'password'}
+              type="text"
+              className="form-control"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder={t('username')}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">{t('password')}</label>
+            <input
+              type="password"
               className="form-control"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder={t('password')}
               required
             />
-            <button
-              type="button"
-              className="btn btn-outline-secondary"
-              onClick={() => setShowPassword((prev) => !prev)}
-              tabIndex={-1}
-            >
-              {showPassword ? '😑' : '😐'}
-            </button>
           </div>
-        </div>
-        <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-          {loading ? 'جارٍ الدخول...' : 'دخول'}
-        </button>
-      </form>
+
+          <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+            {loading ? t('loggingIn') : t('login')}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -19,7 +19,7 @@ export default function ShiftPage() {
     try {
       const result = await getCurrentShift();
       setShift(result.data);
-      setExpectedBalance(result.expected_balance);
+      setExpectedBalance(result.expected_balance ?? result.data?.expected_balance);
       const movementsResult = await getShiftMovements(result.data.id);
       setMovements(movementsResult.movements);
     } catch (err) {
@@ -44,7 +44,7 @@ export default function ShiftPage() {
         const result = await getCurrentShift();
         if (ignore) return;
         setShift(result.data);
-        setExpectedBalance(result.expected_balance);
+        setExpectedBalance(result.expected_balance ?? result.data?.expected_balance);
         const movementsResult = await getShiftMovements(result.data.id);
         if (ignore) return;
         setMovements(movementsResult.movements);
@@ -210,7 +210,7 @@ export default function ShiftPage() {
               </div>
               <div className="text-end">
                 <div className="text-muted small">الرصيد المتوقع الآن</div>
-                <div className="fs-4 fw-bold">{expectedBalance}</div>
+                <div className="fs-4 fw-bold">{Number(expectedBalance || 0).toFixed(2)}</div>
               </div>
             </div>
             <div className="row mt-3">
@@ -253,7 +253,7 @@ export default function ShiftPage() {
                       </td>
                       <td className={m.signed_amount < 0 ? 'text-danger' : 'text-success'}>
                         {m.signed_amount > 0 ? '+' : ''}
-                        {m.signed_amount}
+                        {Number(m.signed_amount || 0).toFixed(2)}
                       </td>
                       <td>
                         {m.reference_type} #{m.reference_id}

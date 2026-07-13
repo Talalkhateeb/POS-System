@@ -1,31 +1,44 @@
-﻿<?php
+<?php
 
 namespace Tests\Feature;
 
-use Tests\TestCase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
 
 class DashboardTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
-    public function authenticated_admin_can_access_the_dashboard_successfully(): void
+    public function test_authenticated_admin_can_access_dashboard_summary(): void
     {
         $adminUser = User::factory()->create([
-            'is_admin' => true,
+            'role' => 'admin',
             'is_active' => true,
         ]);
 
-        $response = $this->actingAs($adminUser)->getJson('/api/dashboard');
+        $response = $this->actingAs($adminUser)->getJson('/api/dashboard/summary');
 
-        $response->assertOk();
+        $response->assertOk()
+            ->assertJsonStructure([
+                'period',
+                'has_data',
+                'range' => ['start', 'end'],
+                'previous_range' => ['start', 'end'],
+                'sales' => ['total', 'invoice_count'],
+                'returns' => ['total'],
+                'net_revenue',
+                'comparison' => [
+                    'previous_sales_total',
+                    'previous_net_revenue',
+                    'sales_total_change_percent',
+                    'net_revenue_change_percent',
+                ],
+            ]);
     }
 
-    /** @test */
-    public function guest_users_are_blocked_from_dashboard(): void
+    public function test_guest_users_are_blocked_from_dashboard_summary(): void
     {
-        $this->getJson('/api/dashboard')->assertStatus(401);
+        $this->getJson('/api/dashboard/summary')->assertStatus(401);
     }
 }
